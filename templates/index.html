@@ -1,0 +1,3168 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Sudoku Pulse</title>
+
+
+    <style>
+
+        /* =====================================================
+           SUDOKU PULSE
+           FUTURISTIC AI INTERFACE
+        ===================================================== */
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+
+        :root {
+
+            --black: #020409;
+            --dark: #050a11;
+            --panel: rgba(7, 14, 23, .78);
+
+            --blue: #00c8ff;
+            --cyan: #55e6ff;
+
+            --pink: #ff2da6;
+            --purple: #8a5cff;
+
+            --green: #35ffb0;
+
+            --white: #eaf7ff;
+            --text: #b5c7d6;
+            --muted: #617486;
+
+            --line: rgba(0, 200, 255, .16);
+        }
+
+
+        html,
+        body {
+
+            min-height: 100%;
+
+            background:
+                var(--black);
+
+            color:
+                var(--white);
+
+        }
+
+
+        body {
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            overflow-x:
+                hidden;
+
+        }
+
+
+        button,
+        input {
+
+            font-family:
+                inherit;
+
+        }
+
+
+        /* =====================================================
+           FUTURISTIC BACKGROUND
+        ===================================================== */
+
+        .future-page {
+
+            min-height:
+                100vh;
+
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            background:
+
+                radial-gradient(
+                    circle at 50% 40%,
+                    rgba(0, 200, 255, .09),
+                    transparent 32%
+                ),
+
+                radial-gradient(
+                    circle at 85% 20%,
+                    rgba(138, 92, 255, .07),
+                    transparent 25%
+                ),
+
+                radial-gradient(
+                    circle at 10% 85%,
+                    rgba(255, 45, 166, .05),
+                    transparent 28%
+                ),
+
+                linear-gradient(
+                    135deg,
+                    #010308,
+                    #07101a 50%,
+                    #02050a
+                );
+
+        }
+
+
+        /* =====================================================
+           MICRO GRID
+        ===================================================== */
+
+        .future-page::before {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            inset:
+                0;
+
+            pointer-events:
+                none;
+
+            background-image:
+
+                linear-gradient(
+                    rgba(0, 200, 255, .035) 1px,
+                    transparent 1px
+                ),
+
+                linear-gradient(
+                    90deg,
+                    rgba(0, 200, 255, .035) 1px,
+                    transparent 1px
+                );
+
+            background-size:
+                45px 45px;
+
+            animation:
+                gridFlow
+                25s
+                linear
+                infinite;
+
+        }
+
+
+        @keyframes gridFlow {
+
+            from {
+
+                background-position:
+                    0 0;
+
+            }
+
+            to {
+
+                background-position:
+                    45px 45px;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           SCANLINES
+        ===================================================== */
+
+        .future-page::after {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            inset:
+                0;
+
+            pointer-events:
+                none;
+
+            background:
+
+                repeating-linear-gradient(
+                    0deg,
+                    transparent 0px,
+                    transparent 4px,
+                    rgba(255,255,255,.009) 5px
+                );
+
+            z-index:
+                2;
+
+        }
+
+
+        /* =====================================================
+           DATA PARTICLES
+        ===================================================== */
+
+        .data-field {
+
+            position:
+                absolute;
+
+            inset:
+                0;
+
+            pointer-events:
+                none;
+
+            z-index:
+                3;
+
+        }
+
+
+        .data {
+
+            position:
+                absolute;
+
+            color:
+                rgba(85,230,255,.35);
+
+            font-family:
+                monospace;
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                1px;
+
+            animation:
+                dataFloat
+                linear
+                infinite;
+
+        }
+
+
+        .data:nth-child(1) {
+
+            left: 8%;
+            top: 80%;
+            animation-duration: 12s;
+
+        }
+
+
+        .data:nth-child(2) {
+
+            left: 19%;
+            top: 95%;
+            animation-duration: 16s;
+
+        }
+
+
+        .data:nth-child(3) {
+
+            left: 37%;
+            top: 88%;
+            animation-duration: 13s;
+
+        }
+
+
+        .data:nth-child(4) {
+
+            left: 57%;
+            top: 96%;
+            animation-duration: 17s;
+
+        }
+
+
+        .data:nth-child(5) {
+
+            left: 73%;
+            top: 85%;
+            animation-duration: 14s;
+
+        }
+
+
+        .data:nth-child(6) {
+
+            left: 91%;
+            top: 92%;
+            animation-duration: 18s;
+
+        }
+
+
+        @keyframes dataFloat {
+
+            0% {
+
+                transform:
+                    translateY(120px);
+
+                opacity:
+                    0;
+
+            }
+
+            20% {
+
+                opacity:
+                    .8;
+
+            }
+
+            80% {
+
+                opacity:
+                    .8;
+
+            }
+
+            100% {
+
+                transform:
+                    translateY(-1000px);
+
+                opacity:
+                    0;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        .header {
+
+            height:
+                76px;
+
+            position:
+                relative;
+
+            z-index:
+                20;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            padding:
+                0 42px;
+
+            background:
+                rgba(2,5,10,.72);
+
+            border-bottom:
+                1px solid
+                rgba(0,200,255,.16);
+
+            backdrop-filter:
+                blur(18px);
+
+        }
+
+
+        .brand {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                13px;
+
+        }
+
+
+        .brand-symbol {
+
+            width:
+                34px;
+
+            height:
+                34px;
+
+            position:
+                relative;
+
+            display:
+                grid;
+
+            place-items:
+                center;
+
+            border:
+                1px solid
+                var(--blue);
+
+            box-shadow:
+
+                0 0 15px
+                rgba(0,200,255,.2),
+
+                inset 0 0 12px
+                rgba(0,200,255,.08);
+
+        }
+
+
+        .brand-symbol::before {
+
+            content:
+                "";
+
+            width:
+                10px;
+
+            height:
+                10px;
+
+            border:
+                1px solid
+                var(--cyan);
+
+            transform:
+                rotate(45deg);
+
+            box-shadow:
+                0 0 12px
+                var(--cyan);
+
+        }
+
+
+        .brand-symbol::after {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            width:
+                5px;
+
+            height:
+                5px;
+
+            background:
+                var(--pink);
+
+            box-shadow:
+                0 0 12px
+                var(--pink);
+
+        }
+
+
+        .brand-name {
+
+            font-size:
+                16px;
+
+            font-weight:
+                700;
+
+            letter-spacing:
+                4px;
+
+            color:
+                var(--white);
+
+            text-shadow:
+                0 0 15px
+                rgba(0,200,255,.35);
+
+        }
+
+
+        .header-status {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                9px;
+
+            color:
+                var(--muted);
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                2px;
+
+        }
+
+
+        .status-light {
+
+            width:
+                7px;
+
+            height:
+                7px;
+
+            border-radius:
+                50%;
+
+            background:
+                var(--green);
+
+            box-shadow:
+                0 0 13px
+                var(--green);
+
+            animation:
+                statusBlink
+                1.7s
+                infinite;
+
+        }
+
+
+        @keyframes statusBlink {
+
+            50% {
+
+                opacity:
+                    .3;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           HOME
+        ===================================================== */
+
+        .home {
+
+            min-height:
+                calc(100vh - 76px);
+
+            position:
+                relative;
+
+            z-index:
+                5;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            padding:
+                55px 20px;
+
+        }
+
+
+        .home-content {
+
+            width:
+                min(900px,100%);
+
+            text-align:
+                center;
+
+        }
+
+
+        .system-label {
+
+            color:
+                var(--blue);
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                6px;
+
+            margin-bottom:
+                18px;
+
+            text-shadow:
+                0 0 15px
+                var(--blue);
+
+            animation:
+                fadeUp
+                .8s
+                ease;
+
+        }
+
+
+        .title {
+
+            font-size:
+                clamp(50px,8vw,94px);
+
+            line-height:
+                .88;
+
+            font-weight:
+                900;
+
+            letter-spacing:
+                6px;
+
+            color:
+                var(--white);
+
+            text-shadow:
+
+                0 0 12px
+                rgba(0,200,255,.55),
+
+                0 0 45px
+                rgba(0,200,255,.16);
+
+            animation:
+                titleIn
+                1s
+                ease;
+
+        }
+
+
+        .title span {
+
+            color:
+                var(--blue);
+
+            text-shadow:
+
+                0 0 12px
+                var(--blue),
+
+                0 0 45px
+                rgba(0,200,255,.6);
+
+        }
+
+
+        @keyframes titleIn {
+
+            from {
+
+                opacity:
+                    0;
+
+                transform:
+                    translateY(-25px)
+                    scale(.97);
+
+            }
+
+            to {
+
+                opacity:
+                    1;
+
+                transform:
+                    translateY(0)
+                    scale(1);
+
+            }
+
+        }
+
+
+        @keyframes fadeUp {
+
+            from {
+
+                opacity:
+                    0;
+
+                transform:
+                    translateY(15px);
+
+            }
+
+            to {
+
+                opacity:
+                    1;
+
+                transform:
+                    translateY(0);
+
+            }
+
+        }
+
+
+        .title-line {
+
+            width:
+                340px;
+
+            max-width:
+                70%;
+
+            height:
+                1px;
+
+            margin:
+                27px auto 22px;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--blue),
+                    var(--pink),
+                    transparent
+                );
+
+            box-shadow:
+                0 0 15px
+                rgba(0,200,255,.4);
+
+        }
+
+
+        .description {
+
+            max-width:
+                620px;
+
+            margin:
+                auto;
+
+            color:
+                var(--muted);
+
+            font-size:
+                13px;
+
+            line-height:
+                1.8;
+
+        }
+
+
+        /* =====================================================
+           AI STATUS BAR
+        ===================================================== */
+
+        .ai-status {
+
+            display:
+                flex;
+
+            justify-content:
+                center;
+
+            flex-wrap:
+                wrap;
+
+            gap:
+                22px;
+
+            margin:
+                25px auto 0;
+
+        }
+
+
+        .ai-item {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                7px;
+
+            color:
+                #607486;
+
+            font-size:
+                8px;
+
+            letter-spacing:
+                2px;
+
+        }
+
+
+        .ai-item span {
+
+            color:
+                var(--green);
+
+            text-shadow:
+                0 0 8px
+                var(--green);
+
+        }
+
+
+        /* =====================================================
+           AI PANEL
+        ===================================================== */
+
+        .ai-panel {
+
+            width:
+                min(730px,100%);
+
+            margin:
+                32px auto 0;
+
+            padding:
+                28px;
+
+            position:
+                relative;
+
+            border:
+                1px solid
+                rgba(0,200,255,.22);
+
+            background:
+                rgba(5,11,18,.72);
+
+            backdrop-filter:
+                blur(18px);
+
+            box-shadow:
+
+                0 30px 80px
+                rgba(0,0,0,.6),
+
+                inset 0 0 50px
+                rgba(0,200,255,.025);
+
+            animation:
+                panelIn
+                1s
+                .15s
+                ease
+                both;
+
+        }
+
+
+        @keyframes panelIn {
+
+            from {
+
+                opacity:
+                    0;
+
+                transform:
+                    translateY(30px);
+
+            }
+
+            to {
+
+                opacity:
+                    1;
+
+                transform:
+                    translateY(0);
+
+            }
+
+        }
+
+
+        /* holographic border */
+
+        .ai-panel::before {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            inset:
+                -1px;
+
+            pointer-events:
+                none;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    var(--blue),
+                    transparent 22%,
+                    transparent 78%,
+                    var(--pink)
+                );
+
+            opacity:
+                .4;
+
+            z-index:
+                -1;
+
+        }
+
+
+        .panel-corner {
+
+            position:
+                absolute;
+
+            width:
+                25px;
+
+            height:
+                25px;
+
+            border:
+                1px solid
+                var(--blue);
+
+        }
+
+
+        .panel-corner.tl {
+
+            top:
+                -1px;
+
+            left:
+                -1px;
+
+            border-right:
+                0;
+
+            border-bottom:
+                0;
+
+        }
+
+
+        .panel-corner.br {
+
+            right:
+                -1px;
+
+            bottom:
+                -1px;
+
+            border-left:
+                0;
+
+            border-top:
+                0;
+
+        }
+
+
+        .panel-heading {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                space-between;
+
+            margin-bottom:
+                18px;
+
+        }
+
+
+        .panel-title {
+
+            color:
+                var(--white);
+
+            font-size:
+                11px;
+
+            letter-spacing:
+                3px;
+
+        }
+
+
+        .panel-code {
+
+            color:
+                #405668;
+
+            font-family:
+                monospace;
+
+            font-size:
+                8px;
+
+            letter-spacing:
+                1px;
+
+        }
+
+
+        /* =====================================================
+           UPLOAD ZONE
+        ===================================================== */
+
+        .upload-zone {
+
+            min-height:
+                155px;
+
+            position:
+                relative;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            border:
+                1px dashed
+                #315066;
+
+            background:
+                rgba(1,5,9,.65);
+
+            transition:
+                .3s;
+
+        }
+
+
+        .upload-zone:hover {
+
+            border-color:
+                var(--blue);
+
+            background:
+                rgba(0,100,150,.05);
+
+            box-shadow:
+
+                inset 0 0 35px
+                rgba(0,200,255,.05),
+
+                0 0 25px
+                rgba(0,200,255,.05);
+
+        }
+
+
+        .upload-zone::before {
+
+            content:
+                "INPUT // PUZZLE_IMAGE";
+
+            position:
+                absolute;
+
+            top:
+                9px;
+
+            left:
+                12px;
+
+            color:
+                #3f5669;
+
+            font-family:
+                monospace;
+
+            font-size:
+                7px;
+
+            letter-spacing:
+                2px;
+
+        }
+
+
+        .upload-zone::after {
+
+            content:
+                "PNG";
+
+            position:
+                absolute;
+
+            right:
+                12px;
+
+            top:
+                9px;
+
+            color:
+                #3f5669;
+
+            font-family:
+                monospace;
+
+            font-size:
+                7px;
+
+        }
+
+
+        .upload-content {
+
+            text-align:
+                center;
+
+        }
+
+
+        .upload-symbol {
+
+            width:
+                48px;
+
+            height:
+                48px;
+
+            margin:
+                0 auto 13px;
+
+            display:
+                grid;
+
+            place-items:
+                center;
+
+            border:
+                1px solid
+                var(--blue);
+
+            color:
+                var(--cyan);
+
+            font-size:
+                23px;
+
+            box-shadow:
+                0 0 20px
+                rgba(0,200,255,.16);
+
+            animation:
+                uploadPulse
+                2.4s
+                ease-in-out
+                infinite;
+
+        }
+
+
+        @keyframes uploadPulse {
+
+            50% {
+
+                box-shadow:
+
+                    0 0 30px
+                    rgba(0,200,255,.35),
+
+                    inset 0 0 12px
+                    rgba(0,200,255,.1);
+
+            }
+
+        }
+
+
+        .upload-title {
+
+            color:
+                #dceaf4;
+
+            font-size:
+                13px;
+
+            letter-spacing:
+                2px;
+
+        }
+
+
+        .upload-hint {
+
+            margin:
+                8px 0 15px;
+
+            color:
+                #53697c;
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                1px;
+
+        }
+
+
+        .file-input {
+
+            max-width:
+                100%;
+
+            color:
+                #8da1b2;
+
+            font-size:
+                11px;
+
+        }
+
+
+        .file-input::file-selector-button {
+
+            padding:
+                8px 15px;
+
+            margin-right:
+                9px;
+
+            border:
+                1px solid
+                #31536c;
+
+            background:
+                #07111b;
+
+            color:
+                #c8ddeb;
+
+            cursor:
+                pointer;
+
+            transition:
+                .2s;
+
+        }
+
+
+        .file-input::file-selector-button:hover {
+
+            border-color:
+                var(--blue);
+
+            color:
+                white;
+
+            box-shadow:
+                0 0 14px
+                rgba(0,200,255,.15);
+
+        }
+
+
+        /* =====================================================
+           SOLVE BUTTON
+        ===================================================== */
+
+        .solve-button {
+
+            width:
+                100%;
+
+            height:
+                64px;
+
+            margin-top:
+                18px;
+
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            border:
+                1px solid
+                var(--blue);
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    rgba(0,200,255,.04),
+                    rgba(0,200,255,.10),
+                    rgba(255,45,166,.04)
+                );
+
+            color:
+                var(--white);
+
+            font-size:
+                19px;
+
+            font-weight:
+                bold;
+
+            letter-spacing:
+                8px;
+
+            cursor:
+                pointer;
+
+            box-shadow:
+
+                0 0 25px
+                rgba(0,200,255,.08),
+
+                inset 0 0 25px
+                rgba(0,200,255,.05);
+
+            transition:
+                .3s;
+
+        }
+
+
+        .solve-button::before {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            left:
+                -30%;
+
+            top:
+                0;
+
+            width:
+                20%;
+
+            height:
+                100%;
+
+            transform:
+                skewX(-20deg);
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(85,230,255,.4),
+                    transparent
+                );
+
+            animation:
+                buttonScan
+                3s
+                infinite;
+
+        }
+
+
+        .solve-button::after {
+
+            content:
+                "AI ENGINE READY";
+
+            position:
+                absolute;
+
+            right:
+                15px;
+
+            bottom:
+                7px;
+
+            color:
+                rgba(85,230,255,.45);
+
+            font-size:
+                7px;
+
+            letter-spacing:
+                2px;
+
+        }
+
+
+        @keyframes buttonScan {
+
+            0%,
+            55% {
+
+                left:
+                    -30%;
+
+            }
+
+            100% {
+
+                left:
+                    120%;
+
+            }
+
+        }
+
+
+        .solve-button:hover {
+
+            border-color:
+                var(--pink);
+
+            color:
+                white;
+
+            box-shadow:
+
+                0 0 30px
+                rgba(0,200,255,.18),
+
+                0 0 45px
+                rgba(255,45,166,.08),
+
+                inset 0 0 30px
+                rgba(0,200,255,.08);
+
+            transform:
+                translateY(-2px);
+
+        }
+
+
+        .solve-button:active {
+
+            transform:
+                translateY(1px);
+
+        }
+
+
+        /* =====================================================
+           FOOTER
+        ===================================================== */
+
+        .footer {
+
+            margin-top:
+                20px;
+
+            color:
+                #3d5366;
+
+            font-family:
+                monospace;
+
+            font-size:
+                8px;
+
+            letter-spacing:
+                3px;
+
+        }
+
+
+        /* =====================================================
+           LOADING SCREEN
+        ===================================================== */
+
+        .loading-screen {
+
+            position:
+                fixed;
+
+            inset:
+                0;
+
+            z-index:
+                9999;
+
+            display:
+                none;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            overflow:
+                hidden;
+
+            background:
+                #010308;
+
+        }
+
+
+        .loading-screen.active {
+
+            display:
+                flex;
+
+        }
+
+
+        .loading-screen::before {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            inset:
+                0;
+
+            background-image:
+
+                linear-gradient(
+                    rgba(0,200,255,.035) 1px,
+                    transparent 1px
+                ),
+
+                linear-gradient(
+                    90deg,
+                    rgba(0,200,255,.035) 1px,
+                    transparent 1px
+                );
+
+            background-size:
+                55px 55px;
+
+            animation:
+                loadingGrid
+                12s
+                linear
+                infinite;
+
+        }
+
+
+        @keyframes loadingGrid {
+
+            from {
+
+                background-position:
+                    0 0;
+
+            }
+
+            to {
+
+                background-position:
+                    55px 55px;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           PULSE CORE
+        ===================================================== */
+
+        .pulse-core {
+
+            position:
+                absolute;
+
+            width:
+                100px;
+
+            height:
+                100px;
+
+            border-radius:
+                50%;
+
+            background:
+
+                radial-gradient(
+                    circle,
+                    white 0%,
+                    var(--cyan) 6%,
+                    var(--blue) 25%,
+                    rgba(0,200,255,.18) 52%,
+                    transparent 73%
+                );
+
+            box-shadow:
+
+                0 0 25px
+                var(--blue),
+
+                0 0 100px
+                rgba(0,200,255,.6);
+
+            animation:
+                coreBeat
+                1s
+                ease-in-out
+                infinite
+                alternate;
+
+        }
+
+
+        @keyframes coreBeat {
+
+            from {
+
+                transform:
+                    scale(.72);
+
+                opacity:
+                    .7;
+
+            }
+
+            to {
+
+                transform:
+                    scale(1.35);
+
+                opacity:
+                    1;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           PULSE RINGS
+        ===================================================== */
+
+        .pulse-ring {
+
+            position:
+                absolute;
+
+            border-radius:
+                50%;
+
+            border:
+                1px solid
+                rgba(0,200,255,.35);
+
+            animation:
+                pulseRing
+                2.5s
+                ease-out
+                infinite;
+
+        }
+
+
+        .pulse-ring.one {
+
+            width:
+                180px;
+
+            height:
+                180px;
+
+        }
+
+
+        .pulse-ring.two {
+
+            width:
+                330px;
+
+            height:
+                330px;
+
+            border-color:
+                rgba(138,92,255,.25);
+
+            animation-delay:
+                .35s;
+
+        }
+
+
+        .pulse-ring.three {
+
+            width:
+                500px;
+
+            height:
+                500px;
+
+            border-color:
+                rgba(255,45,166,.18);
+
+            animation-delay:
+                .7s;
+
+        }
+
+
+        @keyframes pulseRing {
+
+            0% {
+
+                transform:
+                    scale(.65);
+
+                opacity:
+                    .8;
+
+            }
+
+            100% {
+
+                transform:
+                    scale(1.12);
+
+                opacity:
+                    0;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           LOADING CONTENT
+        ===================================================== */
+
+        .loading-content {
+
+            position:
+                relative;
+
+            z-index:
+                10;
+
+            width:
+                min(550px,90%);
+
+            text-align:
+                center;
+
+        }
+
+
+        .loading-label {
+
+            color:
+                var(--blue);
+
+            font-family:
+                monospace;
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                5px;
+
+            margin-bottom:
+                15px;
+
+            text-shadow:
+                0 0 12px
+                var(--blue);
+
+        }
+
+
+        .loading-title {
+
+            color:
+                white;
+
+            font-size:
+                clamp(28px,5vw,48px);
+
+            font-weight:
+                800;
+
+            letter-spacing:
+                9px;
+
+            text-shadow:
+
+                0 0 18px
+                var(--blue),
+
+                0 0 35px
+                rgba(0,200,255,.35);
+
+        }
+
+
+        .progress-box {
+
+            height:
+                7px;
+
+            margin-top:
+                30px;
+
+            padding:
+                1px;
+
+            border:
+                1px solid
+                #29475d;
+
+            background:
+                #02060a;
+
+        }
+
+
+        .progress {
+
+            width:
+                0%;
+
+            height:
+                100%;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    var(--blue),
+                    var(--purple),
+                    var(--pink)
+                );
+
+            box-shadow:
+                0 0 15px
+                var(--blue);
+
+            transition:
+                width
+                .35s
+                ease;
+
+        }
+
+
+        .loading-status {
+
+            min-height:
+                18px;
+
+            margin-top:
+                13px;
+
+            color:
+                #7890a4;
+
+            font-family:
+                monospace;
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                2px;
+
+        }
+
+
+        /* =====================================================
+           RESULT PAGE
+        ===================================================== */
+
+        .result-page {
+
+            min-height:
+                100vh;
+
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            background:
+
+                radial-gradient(
+                    circle at 50% 25%,
+                    rgba(0,200,255,.10),
+                    transparent 35%
+                ),
+
+                linear-gradient(
+                    135deg,
+                    #010308,
+                    #07111b,
+                    #02050a
+                );
+
+        }
+
+
+        .result-page::before {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            inset:
+                0;
+
+            background-image:
+
+                linear-gradient(
+                    rgba(0,200,255,.035) 1px,
+                    transparent 1px
+                ),
+
+                linear-gradient(
+                    90deg,
+                    rgba(255,45,166,.025) 1px,
+                    transparent 1px
+                );
+
+            background-size:
+                50px 50px;
+
+            animation:
+                resultGrid
+                20s
+                linear
+                infinite;
+
+        }
+
+
+        @keyframes resultGrid {
+
+            to {
+
+                background-position:
+                    50px 50px;
+
+            }
+
+        }
+
+
+        .result-container {
+
+            width:
+                min(1050px,94%);
+
+            margin:
+                auto;
+
+            padding:
+                90px 0 60px;
+
+            position:
+                relative;
+
+            z-index:
+                5;
+
+            text-align:
+                center;
+
+        }
+
+
+        .result-label {
+
+            color:
+                var(--green);
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                5px;
+
+            text-shadow:
+                0 0 12px
+                rgba(53,255,176,.55);
+
+        }
+
+
+        .result-title {
+
+            margin-top:
+                13px;
+
+            font-size:
+                clamp(40px,7vw,74px);
+
+            letter-spacing:
+                5px;
+
+            color:
+                white;
+
+            text-shadow:
+
+                0 0 18px
+                rgba(0,200,255,.5),
+
+                0 0 40px
+                rgba(0,200,255,.15);
+
+        }
+
+
+        .result-line {
+
+            width:
+                320px;
+
+            max-width:
+                70%;
+
+            height:
+                1px;
+
+            margin:
+                20px auto 35px;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--blue),
+                    var(--pink),
+                    transparent
+                );
+
+        }
+
+
+        .result-list {
+
+            display:
+                grid;
+
+            gap:
+                25px;
+
+        }
+
+
+        .result-card {
+
+            position:
+                relative;
+
+            overflow:
+                hidden;
+
+            padding:
+                25px;
+
+            border:
+                1px solid
+                rgba(0,200,255,.2);
+
+            background:
+                rgba(4,10,17,.85);
+
+            box-shadow:
+                0 25px 70px
+                rgba(0,0,0,.55);
+
+            animation:
+                resultIn
+                .7s
+                ease;
+
+        }
+
+
+        .result-card::before {
+
+            content:
+                "";
+
+            position:
+                absolute;
+
+            top:
+                0;
+
+            left:
+                0;
+
+            right:
+                0;
+
+            height:
+                2px;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--blue),
+                    var(--pink),
+                    transparent
+                );
+
+            box-shadow:
+                0 0 12px
+                rgba(0,200,255,.4);
+
+        }
+
+
+        @keyframes resultIn {
+
+            from {
+
+                opacity:
+                    0;
+
+                transform:
+                    translateY(25px);
+
+            }
+
+            to {
+
+                opacity:
+                    1;
+
+                transform:
+                    translateY(0);
+
+            }
+
+        }
+
+
+        .filename {
+
+            color:
+                #708396;
+
+            font-family:
+                monospace;
+
+            font-size:
+                10px;
+
+            margin-bottom:
+                14px;
+
+        }
+
+
+        .success {
+
+            display:
+                inline-block;
+
+            padding:
+                7px 16px;
+
+            margin-bottom:
+                18px;
+
+            border:
+                1px solid
+                rgba(53,255,176,.35);
+
+            color:
+                var(--green);
+
+            background:
+                rgba(53,255,176,.035);
+
+            font-family:
+                monospace;
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                2px;
+
+            box-shadow:
+                0 0 15px
+                rgba(53,255,176,.05);
+
+        }
+
+
+        .solved-image {
+
+            display:
+                block;
+
+            width:
+                min(700px,100%);
+
+            max-height:
+                65vh;
+
+            object-fit:
+                contain;
+
+            margin:
+                auto;
+
+            background:
+                white;
+
+            border:
+                1px solid
+                #35546b;
+
+            box-shadow:
+                0 0 35px
+                rgba(0,200,255,.12);
+
+            transition:
+                .3s;
+
+        }
+
+
+        .solved-image:hover {
+
+            transform:
+                translateY(-3px);
+
+            box-shadow:
+                0 0 45px
+                rgba(0,200,255,.25);
+
+        }
+
+
+        .failed {
+
+            color:
+                var(--pink);
+
+            font-size:
+                10px;
+
+            letter-spacing:
+                2px;
+
+            margin-bottom:
+                10px;
+
+        }
+
+
+        .error-text {
+
+            color:
+                #718395;
+
+            font-size:
+                12px;
+
+        }
+
+
+        .new-puzzle {
+
+            margin-top:
+                35px;
+
+            padding:
+                14px 42px;
+
+            border:
+                1px solid
+                var(--blue);
+
+            background:
+                rgba(0,200,255,.04);
+
+            color:
+                var(--cyan);
+
+            font-size:
+                11px;
+
+            letter-spacing:
+                3px;
+
+            cursor:
+                pointer;
+
+            transition:
+                .25s;
+
+        }
+
+
+        .new-puzzle:hover {
+
+            border-color:
+                var(--pink);
+
+            color:
+                white;
+
+            box-shadow:
+                0 0 25px
+                rgba(0,200,255,.15);
+
+            transform:
+                translateY(-2px);
+
+        }
+
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
+
+        @media (max-width:650px) {
+
+            .header {
+
+                height:
+                    64px;
+
+                padding:
+                    0 16px;
+
+            }
+
+
+            .brand-name {
+
+                font-size:
+                    12px;
+
+                letter-spacing:
+                    2px;
+
+            }
+
+
+            .header-status {
+
+                display:
+                    none;
+
+            }
+
+
+            .home {
+
+                min-height:
+                    calc(100vh - 64px);
+
+                padding:
+                    35px 12px;
+
+            }
+
+
+            .ai-panel {
+
+                padding:
+                    18px;
+
+            }
+
+
+            .loading-ring.one {
+
+                width:
+                    180px;
+
+                height:
+                    180px;
+
+            }
+
+
+            .loading-ring.two {
+
+                width:
+                    300px;
+
+                height:
+                    300px;
+
+            }
+
+
+            .loading-ring.three {
+
+                width:
+                    430px;
+
+                height:
+                    430px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+{% if results %}
+
+
+<!-- ============================================================
+     RESULT PAGE
+============================================================ -->
+
+<section class="result-page">
+
+
+    <header class="header">
+
+
+        <div class="brand">
+
+            <div class="brand-symbol"></div>
+
+            <div class="brand-name">
+
+                SUDOKU PULSE
+
+            </div>
+
+        </div>
+
+
+        <div class="header-status">
+
+            <span class="status-light"></span>
+
+            SOLVER ONLINE
+
+        </div>
+
+
+    </header>
+
+
+    <main class="result-container">
+
+
+        <div class="result-label">
+
+            ● ANALYSIS COMPLETE
+
+        </div>
+
+
+        <h1 class="result-title">
+
+            SOLUTION VERIFIED
+
+        </h1>
+
+
+        <div class="result-line"></div>
+
+
+        <div class="result-list">
+
+
+            {% for result in results %}
+
+
+            <div class="result-card">
+
+
+                <div class="filename">
+
+                    {{ result.filename }}
+
+                </div>
+
+
+                {% if result.success %}
+
+
+                    <div class="success">
+
+                        ● GRID SOLUTION CONFIRMED
+
+                    </div>
+
+
+                    <img
+                        class="solved-image"
+                        src="{{ url_for(
+                            'output_file',
+                            filename=result.output
+                        ) }}"
+                        alt="Solved Sudoku"
+                    >
+
+
+                {% else %}
+
+
+                    <div class="failed">
+
+                        × SOLUTION FAILED
+
+                    </div>
+
+
+                    <div class="error-text">
+
+                        {{ result.error }}
+
+                    </div>
+
+
+                {% endif %}
+
+
+            </div>
+
+
+            {% endfor %}
+
+
+        </div>
+
+
+        <button
+            class="new-puzzle"
+            type="button"
+            onclick="window.location.href='/'"
+        >
+
+            ↻ NEW PUZZLE
+
+        </button>
+
+
+    </main>
+
+
+</section>
+
+
+{% else %}
+
+
+<!-- ============================================================
+     HOME PAGE
+============================================================ -->
+
+<section class="future-page">
+
+
+    <div class="data-field">
+
+        <div class="data">010011 // PULSE</div>
+
+        <div class="data">GRID.SYS // 2048</div>
+
+        <div class="data">AI_CORE // ACTIVE</div>
+
+        <div class="data">OCR_NODE // READY</div>
+
+        <div class="data">SOLVER // ONLINE</div>
+
+        <div class="data">PULSE://07A</div>
+
+    </div>
+
+
+    <header class="header">
+
+
+        <div class="brand">
+
+
+            <div class="brand-symbol"></div>
+
+
+            <div class="brand-name">
+
+                SUDOKU PULSE
+
+            </div>
+
+
+        </div>
+
+
+        <div class="header-status">
+
+            <span class="status-light"></span>
+
+            SYSTEM ONLINE
+
+        </div>
+
+
+    </header>
+
+
+    <main class="home">
+
+
+        <div class="home-content">
+
+
+            <div class="system-label">
+
+                ◇ NEURAL PUZZLE ENGINE // V2.7 ◇
+
+            </div>
+
+
+            <h1 class="title">
+
+                SUDOKU
+                <span>PULSE</span>
+
+            </h1>
+
+
+            <div class="title-line"></div>
+
+
+            <p class="description">
+
+                A next-generation puzzle analysis system.
+                Upload a Sudoku image and let the neural engine
+                detect, calculate and solve the puzzle.
+
+            </p>
+
+
+            <!-- =================================================
+                 AI STATUS
+            ================================================= -->
+
+            <div class="ai-status">
+
+
+                <div class="ai-item">
+
+                    <span>●</span>
+
+                    OCR CORE
+
+                </div>
+
+
+                <div class="ai-item">
+
+                    <span>●</span>
+
+                    GRID ANALYZER
+
+                </div>
+
+
+                <div class="ai-item">
+
+                    <span>●</span>
+
+                    SOLVER CORE
+
+                </div>
+
+
+            </div>
+
+
+            <!-- =================================================
+                 INPUT PANEL
+            ================================================= -->
+
+            <form
+                id="solveForm"
+                action="/solve"
+                method="POST"
+                enctype="multipart/form-data"
+            >
+
+
+                <div class="ai-panel">
+
+
+                    <div class="panel-corner tl"></div>
+
+                    <div class="panel-corner br"></div>
+
+
+                    <div class="panel-heading">
+
+
+                        <div class="panel-title">
+
+                            PUZZLE INPUT
+
+                        </div>
+
+
+                        <div class="panel-code">
+
+                            NODE_01 // READY
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="upload-zone">
+
+
+                        <div class="upload-content">
+
+
+                            <div class="upload-symbol">
+
+                                ↑
+
+                            </div>
+
+
+                            <div class="upload-title">
+
+                                SELECT SUDOKU IMAGE
+
+                            </div>
+
+
+                            <div class="upload-hint">
+
+                                PNG FORMAT • MULTIPLE FILES SUPPORTED
+
+                            </div>
+
+
+                            <input
+                                id="images"
+                                class="file-input"
+                                type="file"
+                                name="images"
+                                multiple
+                                accept=".png"
+                                required
+                            >
+
+
+                        </div>
+
+
+                    </div>
+
+
+                    <button
+                        class="solve-button"
+                        type="submit"
+                    >
+
+                        ⚡ SOLVE
+
+                    </button>
+
+
+                </div>
+
+
+            </form>
+
+
+            {% if error %}
+
+
+            <div class="error">
+
+                {{ error }}
+
+            </div>
+
+
+            {% endif %}
+
+
+            <div class="footer">
+
+                ANALYZE // COMPUTE // SOLVE
+
+            </div>
+
+
+        </div>
+
+
+    </main>
+
+
+</section>
+
+
+{% endif %}
+
+
+
+<!-- ============================================================
+     AI PROCESSING SCREEN
+============================================================ -->
+
+<div
+    id="loadingScreen"
+    class="loading-screen"
+>
+
+
+    <!-- Pulse rings -->
+
+    <div class="pulse-ring one"></div>
+
+    <div class="pulse-ring two"></div>
+
+    <div class="pulse-ring three"></div>
+
+
+    <!-- AI core -->
+
+    <div class="pulse-core"></div>
+
+
+    <!-- Loading information -->
+
+    <div class="loading-content">
+
+
+        <div class="loading-label">
+
+            SUDOKU PULSE // AI ENGINE
+
+        </div>
+
+
+        <div class="loading-title">
+
+            PROCESSING
+
+        </div>
+
+
+        <div class="progress-box">
+
+
+            <div
+                id="progress"
+                class="progress"
+            ></div>
+
+
+        </div>
+
+
+        <div
+            id="loadingStatus"
+            class="loading-status"
+        >
+
+            INITIALIZING ENGINE...
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+
+
+<script>
+
+
+    /* =========================================================
+       SOLVE FORM
+    ========================================================= */
+
+
+    const solveForm =
+        document.getElementById(
+            "solveForm"
+        );
+
+
+    const loadingScreen =
+        document.getElementById(
+            "loadingScreen"
+        );
+
+
+    const progress =
+        document.getElementById(
+            "progress"
+        );
+
+
+    const loadingStatus =
+        document.getElementById(
+            "loadingStatus"
+        );
+
+
+    if (solveForm) {
+
+
+        solveForm.addEventListener(
+            "submit",
+            function () {
+
+
+                /*
+                    สำคัญมาก
+
+                    เราไม่ใช้ preventDefault()
+
+                    เพราะต้องให้ Browser
+                    ส่งไฟล์ไป Flask ที่
+
+                    /solve
+                */
+
+
+                loadingScreen.classList.add(
+                    "active"
+                );
+
+
+                const steps = [
+
+                    [
+                        10,
+                        "BOOTING NEURAL ENGINE..."
+                    ],
+
+                    [
+                        24,
+                        "LOADING PUZZLE DATA..."
+                    ],
+
+                    [
+                        40,
+                        "ANALYZING GRID STRUCTURE..."
+                    ],
+
+                    [
+                        58,
+                        "OCR CORE // RECOGNIZING..."
+                    ],
+
+                    [
+                        78,
+                        "SOLVER CORE // COMPUTING..."
+                    ],
+
+                    [
+                        93,
+                        "VERIFYING SOLUTION..."
+                    ],
+
+                    [
+                        98,
+                        "FINALIZING OUTPUT..."
+                    ]
+
+                ];
+
+
+                let current =
+                    0;
+
+
+                function updateProgress() {
+
+
+                    if (
+                        current >=
+                        steps.length
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    progress.style.width =
+                        steps[current][0] + "%";
+
+
+                    loadingStatus.textContent =
+                        steps[current][1];
+
+
+                    current++;
+
+
+                    setTimeout(
+                        updateProgress,
+                        600
+                    );
+
+                }
+
+
+                updateProgress();
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       FILE INPUT
+    ========================================================= */
+
+
+    const fileInput =
+        document.getElementById(
+            "images"
+        );
+
+
+    if (fileInput) {
+
+
+        fileInput.addEventListener(
+            "change",
+            function () {
+
+
+                const count =
+                    this.files.length;
+
+
+                const hint =
+                    document.querySelector(
+                        ".upload-hint"
+                    );
+
+
+                if (
+                    count > 0 &&
+                    hint
+                ) {
+
+
+                    if (count === 1) {
+
+                        hint.textContent =
+                            "1 PUZZLE SELECTED";
+
+                    }
+                    else {
+
+                        hint.textContent =
+                            count +
+                            " PUZZLES SELECTED";
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+</script>
+
+
+</body>
+
+</html>
