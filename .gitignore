@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+
+uploads/*
+output/*
+debug_digits/*
+cells/*
+
+.sudoku_processed_*.png
+
+.env
+.venv/
+venv/
