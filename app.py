@@ -139,9 +139,33 @@ def _cell_has_visible_mark(image, row, col):
     return count >= 35
 
 
-def _draw_solution(sudoku_image, occupied, solution):
-    """วาดเฉพาะช่องว่างจริง และห้ามเขียนทับเลขที่มองเห็นในภาพ"""
+def _draw_solution(sudoku_image, occupied, solution, corrected_cells=None):
+    """วาดคำตอบ และแก้ Cell ที่ OCR Recovery พบว่าอ่าน clue ผิด"""
     output = sudoku_image.copy()
+    corrected = set(corrected_cells or [])
+
+    # ถ้า OCR Recovery แก้ clue ให้ลบเฉพาะหมึกเดิมใน Cell นั้นก่อน
+    # แล้ววาดคำตอบใหม่ เพื่อไม่ให้เลขดำเดิมค้างอยู่
+    for row, col in corrected:
+        y1 = row * 50 + 5
+        y2 = (row + 1) * 50 - 5
+        x1 = col * 50 + 5
+        x2 = (col + 1) * 50 - 5
+
+        cell = output[y1:y2, x1:x2]
+        if cell.size == 0:
+            continue
+
+        h, w = cell.shape[:2]
+        k = max(2, min(h, w) // 5)
+        corners = np.concatenate([
+            cell[:k, :k].reshape(-1, 3),
+            cell[:k, -k:].reshape(-1, 3),
+            cell[-k:, :k].reshape(-1, 3),
+            cell[-k:, -k:].reshape(-1, 3),
+        ], axis=0)
+        background = np.median(corners, axis=0).astype(np.uint8)
+        output[y1:y2, x1:x2] = background
 
     # Detector เดิมยังใช้ได้เป็นหนึ่งใน safety checks
     visual_occupied = _visual_occupied(sudoku_image)
@@ -157,8 +181,10 @@ def _draw_solution(sudoku_image, occupied, solution):
 
     for row in range(9):
         for col in range(9):
-            # ถ้า OCR หรือ visual detector เห็นเลขแล้ว ห้ามวาด
-            if occupied[row][col] or visual_occupied[row][col]:
+            # ช่องที่ OCR Recovery แก้แล้วต้องวาดคำตอบทับ clue เดิม
+            if (row, col) in corrected:
+                pass
+            elif occupied[row][col] or visual_occupied[row][col]:
                 continue
 
             # Safety guard ตัวที่สองจาก pixel จริง
@@ -331,6 +357,7 @@ def solve_route():
                 sudoku_image,
                 occupied,
                 solution,
+                corrected_cells,
             )
 
             if output is None:
