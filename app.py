@@ -9,6 +9,7 @@ from pathlib import Path
 import traceback
 import uuid
 import cv2
+import numpy as np
 
 from image_solver import solve_image
 from digit_reader import _visual_occupied
@@ -18,10 +19,6 @@ from sudoku_recovery import (
 )
 
 
-# ==========================================
-# Paths - อ้างอิงจากตำแหน่ง app.py เสมอ
-# ==========================================
-
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_FOLDER = BASE_DIR / "uploads"
 OUTPUT_FOLDER = BASE_DIR / "output"
@@ -29,10 +26,6 @@ OUTPUT_FOLDER = BASE_DIR / "output"
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
-
-# ==========================================
-# Flask
-# ==========================================
 
 app = Flask(
     __name__,
@@ -42,18 +35,10 @@ app = Flask(
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
 
 
-# ==========================================
-# หน้าแรก
-# ==========================================
-
 @app.route("/")
 def index():
     return render_template("index.html")
 
-
-# ==========================================
-# เปิด Output
-# ==========================================
 
 @app.route("/output/<path:filename>")
 def output_file(filename):
@@ -63,42 +48,89 @@ def output_file(filename):
     )
 
 
-# ==========================================
-# ตรวจ Solution เพิ่มก่อนบันทึก
-# ==========================================
-
-def _validate_final_result(
-    board,
-    solution,
-):
+def _validate_final_result(board, solution):
     if solution is None:
         return False, "ไม่พบคำตอบ Sudoku"
 
     if not solution_is_valid(solution):
         return False, "คำตอบ Sudoku ไม่ถูกต้อง"
 
-    if not solution_preserves_clues(
-        board,
-        solution,
-    ):
+    if not solution_preserves_clues(board, solution):
         return False, "คำตอบเปลี่ยนเลขโจทย์เดิม"
 
     return True, None
 
 
-# ==========================================
-# วาด Solution
-# ==========================================
+def _cell_has_visible_mark(image, row, col):
+    """ตรวจหมึกที่อยู่ในพื้นที่กลาง Cell โดยไม่พึ่ง OCR
 
-def _draw_solution(
-    sudoku_image,
-    occupied,
-    solution,
-):
-    """วาดเฉพาะช่องที่ภาพต้นฉบับไม่มีเลขอยู่แล้ว"""
+    ใช้เป็น safety guard ตอนวาดคำตอบเท่านั้น:
+    ถ้ามีตัวเลขจริงอยู่ในภาพ จะไม่วาดทับ แม้ OCR จะพลาดช่องนั้น
+    """
+    if image is None:
+        return False
+
+    if len(image.shape) == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image
+
+    if gray.shape[:2] != (450, 450):
+        gray = cv2.resize(
+            gray,
+            (450, 450),
+            interpolation=cv2.INTER_CUBIC,
+        )
+
+    # ตัดบริเวณใกล้เส้น Grid ออก
+    y1 = row * 50 + 9
+    y2 = (row + 1) * 50 - 9
+    x1 = col * 50 + 9
+    x2 = (col + 1) * 50 - 9
+
+    cell = gray[y1:y2, x1:x2]
+
+    if cell.size == 0:
+        return False
+
+    # พื้นหลังประมาณจากมุมของ Cell
+    h, w = cell.shape
+    corner_size = max(3, min(h, w) // 5)
+    corners = np.concatenate([
+        cell[:corner_size, :corner_size].ravel(),
+        cell[:corner_size, -corner_size:].ravel(),
+        cell[-corner_size:, :corner_size].ravel(),
+        cell[-corner_size:, -corner_size:].ravel(),
+    ])
+
+    background = float(np.median(corners))
+
+    # ตัวเลข/หมึกต้องแตกต่างจากพื้นหลังพอสมควร
+    difference = np.abs(
+        cell.astype(np.int16) - int(round(background))
+    )
+
+    ink = difference >= 35
+
+    # ตัด pixel ที่รวมกันเป็นเส้นเล็ก ๆ ออก
+    mask = (ink.astype(np.uint8) * 255)
+    mask = cv2.morphologyEx(
+        mask,
+        cv2.MORPH_OPEN,
+        np.ones((2, 2), np.uint8),
+    )
+
+    count = cv2.countNonZero(mask)
+
+    # ตัวเลข Sudoku ปกติจะมีพื้นที่หมึกมากกว่านี้
+    return count >= 35
+
+
+def _draw_solution(sudoku_image, occupied, solution):
+    """วาดเฉพาะช่องว่างจริง และห้ามเขียนทับเลขที่มองเห็นในภาพ"""
     output = sudoku_image.copy()
 
-    # ตรวจจากภาพจริง ไม่ใช้ board ที่ recovery อาจแก้ค่า OCR แล้ว
+    # Detector เดิมยังใช้ได้เป็นหนึ่งใน safety checks
     visual_occupied = _visual_occupied(sudoku_image)
 
     height, width = output.shape[:2]
@@ -112,8 +144,20 @@ def _draw_solution(
 
     for row in range(9):
         for col in range(9):
-            # ถ้ามีเลขอยู่ในภาพจริง ห้ามวาดทับ
+            # ถ้า OCR หรือ visual detector เห็นเลขแล้ว ห้ามวาด
             if occupied[row][col] or visual_occupied[row][col]:
+                continue
+
+            # Safety guard ตัวที่สองจาก pixel จริง
+            if _cell_has_visible_mark(
+                sudoku_image,
+                row,
+                col,
+            ):
+                print(
+                    f"Draw guard: ข้าม R{row + 1}C{col + 1} "
+                    "เพราะพบหมึกในภาพ"
+                )
                 continue
 
             number = solution[row][col]
@@ -123,27 +167,38 @@ def _draw_solution(
             text = str(number)
             font_scale = min(cell_w, cell_h) / 45.0
             text_size = cv2.getTextSize(
-                text, font, font_scale, thickness
+                text,
+                font,
+                font_scale,
+                thickness,
             )[0]
 
-            center_x = int(col * cell_w + cell_w / 2)
-            center_y = int(
-                row * cell_h + cell_h / 2 + text_size[1] / 2
+            center_x = int(
+                col * cell_w + cell_w / 2
             )
-            x = int(center_x - text_size[0] / 2)
+            center_y = int(
+                row * cell_h
+                + cell_h / 2
+                + text_size[1] / 2
+            )
+            x = int(
+                center_x - text_size[0] / 2
+            )
 
             cv2.putText(
-                output, text, (x, center_y), font,
-                font_scale, green, thickness, cv2.LINE_AA
+                output,
+                text,
+                (x, center_y),
+                font,
+                font_scale,
+                green,
+                thickness,
+                cv2.LINE_AA,
             )
             drawn += 1
 
     return output, drawn
 
-
-# ==========================================
-# /solve
-# ==========================================
 
 @app.route(
     "/solve",
@@ -153,7 +208,6 @@ def solve_route():
 
     files = request.files.getlist("images")
 
-    # บาง HTML ใช้ชื่อ image[]
     if not files:
         files = request.files.getlist("image")
 
@@ -212,9 +266,6 @@ def solve_route():
         )
 
         try:
-            # ==================================
-            # บันทึก Input
-            # ==================================
             file.save(str(input_path))
 
             if not input_path.exists():
@@ -222,9 +273,6 @@ def solve_route():
                     "บันทึกไฟล์ Input ไม่สำเร็จ"
                 )
 
-            # ==================================
-            # Solve
-            # ==================================
             print(
                 f"\n========== {original_name} =========="
             )
@@ -253,9 +301,6 @@ def solve_route():
                 solution,
             ) = result
 
-            # ==================================
-            # Final validation
-            # ==================================
             valid, error = _validate_final_result(
                 board,
                 solution,
@@ -269,9 +314,6 @@ def solve_route():
                 })
                 continue
 
-            # ==================================
-            # วาดคำตอบ
-            # ==================================
             output, drawn = _draw_solution(
                 sudoku_image,
                 occupied,
@@ -283,9 +325,6 @@ def solve_route():
                     "สร้างภาพผลลัพธ์ไม่สำเร็จ"
                 )
 
-            # ==================================
-            # บันทึก Output
-            # ==================================
             if not cv2.imwrite(
                 str(output_path),
                 output,
@@ -325,7 +364,6 @@ def solve_route():
             })
 
         finally:
-            # ลบ Input ชั่วคราว
             try:
                 if input_path.exists():
                     input_path.unlink()
@@ -338,10 +376,6 @@ def solve_route():
     )
 
 
-# ==========================================
-# Error 413
-# ==========================================
-
 @app.errorhandler(413)
 def request_too_large(error):
     return render_template(
@@ -349,10 +383,6 @@ def request_too_large(error):
         error="ไฟล์ใหญ่เกิน 32 MB",
     ), 413
 
-
-# ==========================================
-# Run
-# ==========================================
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
