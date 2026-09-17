@@ -341,6 +341,7 @@ def solve_route():
                 candidates,
                 confidence,
                 solution,
+                corrected_cells,
             ) = result
 
             valid, error = _validate_final_result(
