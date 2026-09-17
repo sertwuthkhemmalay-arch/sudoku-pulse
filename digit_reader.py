@@ -2107,6 +2107,11 @@ def _strong_visual_occupied(image):
     hsv = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
     result = [[False] * 9 for _ in range(9)]
 
+    # ภาพบางชุดมีเส้นทแยง 2 เส้นพาดผ่านกระดาน
+    # detector นี้ต้องตัดเส้นดังกล่าวออกก่อน มิฉะนั้นจะคิดว่า
+    # เส้นทแยงคือ "เลขที่มองเห็น" แล้วพยายาม OCR ทุกช่องที่เส้นพาดผ่าน
+    diagonal_found = _has_diagonal_from_gray(gray)
+
     for r in range(9):
         for c in range(9):
             y1, y2 = r * 50 + 9, (r + 1) * 50 - 9
@@ -2147,6 +2152,17 @@ def _strong_visual_occupied(image):
             mask = (
                 gray_ink | colored
             ).astype(np.uint8) * 255
+
+            if diagonal_found:
+                yy, xx = np.indices(mask.shape)
+                gy = yy + y1
+                gx = xx + x1
+                diagonal = (
+                    (np.abs(gy - gx) <= 4)
+                    |
+                    (np.abs(gy - (449 - gx)) <= 4)
+                )
+                mask[diagonal] = 0
 
             mask = cv2.morphologyEx(
                 mask,
