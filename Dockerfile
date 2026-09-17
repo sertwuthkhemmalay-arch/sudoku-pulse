@@ -2,7 +2,7 @@ FROM python:3.14.6-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive\nENV TESSDATA_PREFIX=/usr/local/share/tessdata
 
 # Dependencies required to build Tesseract 5.5.3
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -36,6 +36,10 @@ RUN wget -O tesseract-5.5.3.tar.gz \
     && make -j"$(nproc)" \
     && make install \
     && ldconfig \
+    && mkdir -p /usr/local/share/tessdata \
+    && wget -O /usr/local/share/tessdata/eng.traineddata \
+       https://github.com/tesseract-ocr/tessdata_fast/raw/refs/heads/main/eng.traineddata \
+    && TESSDATA_PREFIX=/usr/local/share/tessdata tesseract --list-langs \
     && tesseract --version
 
 WORKDIR /app
