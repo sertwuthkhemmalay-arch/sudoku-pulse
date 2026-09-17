@@ -172,15 +172,38 @@ def solve_image(image_path):
         if sudoku_image is None:
             return None
 
+        corrected_cells = []
+
+        for r in range(9):
+            for c in range(9):
+                if original_board[r][c] != board[r][c]:
+                    corrected_cells.append((r, c))
+
+        if corrected_cells:
+            print(
+                "OCR Recovery แก้ clue:",
+                [
+                    (
+                        r + 1,
+                        c + 1,
+                        original_board[r][c],
+                        board[r][c],
+                        solution[r][c],
+                    )
+                    for r, c in corrected_cells
+                ],
+            )
+
         print("แก้ Sudoku สำเร็จ! ✅")
 
         return (
             sudoku_image,
-            original_board,
+            board,
             occupied,
             candidates,
             confidence,
-            solution
+            solution,
+            corrected_cells,
         )
 
     finally:
