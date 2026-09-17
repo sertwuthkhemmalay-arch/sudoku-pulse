@@ -2082,6 +2082,187 @@ def _visual_occupied(image):
     return result
 
 
+def _strong_visual_occupied(image):
+    """ตรวจเลข/หมึกจริงในพื้นที่กลาง Cell ด้วย pixel difference
+
+    ใช้เป็น safety check เพิ่มจาก _visual_occupied เพราะภาพบางชุด
+    มีเลขชิดขอบหรือมีสี/พื้นหลังที่ทำให้ detector เดิมพลาด
+    """
+    gray = prepare_board(image)
+
+    if isinstance(image, str):
+        color = cv2.imread(image)
+    else:
+        color = image.copy() if image is not None else None
+
+    if color is None:
+        color = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    elif color.shape[:2] != (450, 450):
+        color = cv2.resize(
+            color,
+            (450, 450),
+            interpolation=cv2.INTER_CUBIC,
+        )
+
+    hsv = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
+    result = [[False] * 9 for _ in range(9)]
+
+    for r in range(9):
+        for c in range(9):
+            y1, y2 = r * 50 + 9, (r + 1) * 50 - 9
+            x1, x2 = c * 50 + 9, (c + 1) * 50 - 9
+
+            cell = gray[y1:y2, x1:x2]
+            hcell = hsv[y1:y2, x1:x2]
+
+            if cell.size == 0:
+                continue
+
+            h, w = cell.shape
+            k = max(3, min(h, w) // 5)
+
+            corners = np.concatenate([
+                cell[:k, :k].ravel(),
+                cell[:k, -k:].ravel(),
+                cell[-k:, :k].ravel(),
+                cell[-k:, -k:].ravel(),
+            ])
+
+            background = float(np.median(corners))
+            diff = np.abs(
+                cell.astype(np.int16)
+                - int(round(background))
+            )
+
+            # ใช้ทั้งความต่างของความสว่างและสี
+            gray_ink = diff >= 30
+            colored = (
+                (hcell[:, :, 1] >= 45)
+                & (np.abs(
+                    hcell[:, :, 2].astype(np.int16)
+                    - int(round(background))
+                ) >= 20)
+            )
+
+            mask = (
+                gray_ink | colored
+            ).astype(np.uint8) * 255
+
+            mask = cv2.morphologyEx(
+                mask,
+                cv2.MORPH_OPEN,
+                np.ones((2, 2), np.uint8),
+            )
+
+            n, labels, stats, _ = cv2.connectedComponentsWithStats(
+                mask,
+                8,
+            )
+
+            good_area = 0
+            for i in range(1, n):
+                x, y, ww, hh, area = stats[i]
+
+                if area < 12:
+                    continue
+
+                if ww > 0.85 * mask.shape[1]:
+                    continue
+
+                if hh > 0.85 * mask.shape[0]:
+                    continue
+
+                ratio = max(ww, hh) / max(
+                    1,
+                    min(ww, hh),
+                )
+
+                if ratio > 10:
+                    continue
+
+                good_area += area
+
+            result[r][c] = good_area >= 28
+
+    return result
+
+
+def _repair_visible_clues(image, board, occupied, candidates, confidence):
+    """เติม clue ที่ภาพมีจริงแต่ Whole-board OCR พลาด
+
+    ถ้าพบหมึกใน Cell ที่ board ยังเป็น 0 จะอ่าน Cell นั้นซ้ำโดยตรง
+    และห้ามปล่อยให้ Solver เดาแทนเลขโจทย์ที่มองเห็นได้
+    """
+    strong = _strong_visual_occupied(image)
+    repaired = 0
+    unresolved = []
+
+    for r in range(9):
+        for c in range(9):
+            if not strong[r][c]:
+                continue
+
+            if board[r][c] != 0:
+                occupied[r][c] = True
+                continue
+
+            x1 = c * 50 + 5
+            x2 = (c + 1) * 50 - 5
+            y1 = r * 50 + 5
+            y2 = (r + 1) * 50 - 5
+
+            cell = image[y1:y2, x1:x2] if not isinstance(image, str) else None
+
+            if cell is None:
+                full = cv2.imread(image)
+                if full is None:
+                    unresolved.append((r, c))
+                    continue
+                cell = full[y1:y2, x1:x2]
+
+            digit = None
+            score = 0.0
+
+            for psm in (6, 10, 13):
+                value, current_score = _ocr_clean_cell(
+                    cell,
+                    psm,
+                )
+                if value is not None:
+                    digit = value
+                    score = current_score
+                    break
+
+            if digit is None:
+                # read_cell มี preprocessing อีกชุดหนึ่ง จึงใช้เป็นรอบสุดท้าย
+                result = read_cell(cell)
+                digit = result.get("digit")
+                score = float(result.get("confidence", 0.0))
+
+            if digit is None:
+                unresolved.append((r, c))
+                continue
+
+            board[r][c] = digit
+            occupied[r][c] = True
+            candidates[r][c] = {digit}
+            confidence[r][c] = score
+            repaired += 1
+
+            print(
+                f"Visible clue repair: "
+                f"R{r + 1}C{c + 1} = {digit}"
+            )
+
+    if unresolved:
+        print(
+            "Visible clues ที่ OCR อ่านไม่ได้:",
+            [(r + 1, c + 1) for r, c in unresolved],
+        )
+
+    return repaired, unresolved
+
+
 def _has_diagonal_from_gray(gray):
     edges = cv2.Canny(gray, 50, 150)
     lines = cv2.HoughLinesP(
@@ -2247,100 +2428,110 @@ def _read_blue_fast(image):
     return board, occupied, candidates, confidence
 
 def read_board(image, force_cell=False):
-    """อ่าน Sudoku โดยใช้ Whole-board เป็นทางเลือกแรกที่เร็วกว่า
-    และ Cell OCR เป็น fallback เมื่อภาพมี clue ที่ whole-board อ่านไม่ครบ
-    หรือเมื่อ caller ขอ force_cell"""
+    """อ่าน Sudoku และยืนยัน clue ที่มองเห็นก่อนส่งให้ Solver."""
+
+    def finalize(result, label):
+        board, occupied, candidates, confidence = result
+
+        repaired, unresolved = _repair_visible_clues(
+            image,
+            board,
+            occupied,
+            candidates,
+            confidence,
+        )
+
+        if unresolved:
+            print(
+                f"{label}: ยังมี clue ที่อ่านไม่ได้ "
+                "-> ไม่เลือก board นี้"
+            )
+            return None
+
+        if not _clues_are_valid(board):
+            print(
+                f"{label}: OCR มีเลขขัดแย้ง "
+                "-> ไม่เลือก board นี้"
+            )
+            return None
+
+        if repaired:
+            print(
+                f"{label}: ซ่อม clue ที่ OCR พลาด {repaired} ช่อง"
+            )
+
+        print(f"OK: {label}")
+        return board, occupied, candidates, confidence
 
     if is_gold_style(image):
-        return _read_gold_fast(image)
+        return finalize(
+            _read_gold_fast(image),
+            "Gold Cell OCR",
+        )
 
-    # ภาพที่ clue เป็นสีน้ำเงินต้องใช้ Blue Cell OCR โดยตรง
-    # เพราะ Whole-board OCR มีโอกาสรวมเส้น/ตำแหน่งผิด
     if is_blue_style(image):
         print("Blue Sudoku -> Blue Cell OCR")
-        return _read_blue_fast(image)
+        return finalize(
+            _read_blue_fast(image),
+            "Blue Cell OCR",
+        )
 
     visual = _visual_occupied(image)
 
-    # --------------------------------------
-    # รอบแรก: Whole-board OCR
-    # --------------------------------------
     if not force_cell:
         try:
-            board, occupied, candidates, confidence = _read_standard_board(image)
+            result = _read_standard_board(image)
 
             missing = [
                 (r, c)
                 for r in range(9)
                 for c in range(9)
-                if visual[r][c] and board[r][c] == 0
+                if visual[r][c] and result[0][r][c] == 0
             ]
 
-            # อย่าใช้ visual detector เป็นตัวตัดสิน OCR
-            # เพราะเส้น Grid/Noise อาจถูกมองว่าเป็นตัวเลข
-            if _clues_are_valid(board):
-                print("OK: Whole-board OCR selected")
-                return board, occupied, candidates, confidence
-
-            print(
-                "Whole-board OCR ไม่ผ่านการตรวจเลขซ้ำ/ขัดแย้ง "
-                "-> Cell OCR"
-            )
+            if missing:
+                print(
+                    "Whole-board OCR มี clue ที่อ่านไม่ครบ "
+                    f"({len(missing)} ช่อง) -> ตรวจซ้ำด้วย Cell OCR"
+                )
+            else:
+                finalized = finalize(
+                    result,
+                    "Whole-board OCR",
+                )
+                if finalized is not None:
+                    return finalized
 
         except Exception as e:
             print(f"Whole-board OCR fallback: {e}")
 
-    # --------------------------------------
-    # รอบสอง: Cell-by-cell OCR
-    # --------------------------------------
     try:
-        board, occupied, candidates, confidence = _read_robust_cells(image)
-
-        missing = [
-            (r, c)
-            for r in range(9)
-            for c in range(9)
-            if visual[r][c] and board[r][c] == 0
-        ]
-
-        # ถ้า OCR ได้ board ที่ไม่ขัดแย้ง ให้ใช้ต่อได้เลย
-        # ไม่บังคับ complete_enough จาก visual detector
-        if _clues_are_valid(board):
-            print("OK: Cell-by-cell OCR selected")
-            return board, occupied, candidates, confidence
+        result = _read_robust_cells(image)
+        finalized = finalize(
+            result,
+            "Cell-by-cell OCR",
+        )
+        if finalized is not None:
+            return finalized
 
         print(
-            "Cell OCR มีเลขขัดแย้ง -> Component OCR"
+            "Cell OCR ยังไม่ผ่าน -> Component OCR"
         )
 
     except Exception as e:
         print(f"Cell OCR fallback: {e}")
 
-    # --------------------------------------
-    # รอบสุดท้าย: Component OCR
-    # --------------------------------------
     board, occupied, candidates, confidence, count = _read_component_board(image)
 
-    missing = [
-        (r, c)
-        for r in range(9)
-        for c in range(9)
-        if visual[r][c] and board[r][c] == 0
-    ]
+    finalized = finalize(
+        (board, occupied, candidates, confidence),
+        f"Component OCR ({count} cells)",
+    )
 
-    # visual detector อาจมองเส้น Grid/Noise เป็นตัวเลข
-    # จึงไม่ raise error เพียงเพราะ visual[r][c] เป็น True
-    if missing:
-        print(
-            "Component OCR อ่านบางช่องไม่ได้ "
-            f"({len(missing)} ช่อง) -> ปล่อยให้ Recovery/Solver จัดการ"
-        )
-
-    if not _clues_are_valid(board):
+    if finalized is None:
         raise ValueError(
-            "OCR อ่านเลขขัดแย้งกัน จึงไม่สร้างคำตอบปลอม"
+            "OCR อ่าน clue ที่มองเห็นไม่ครบหรือเกิดเลขขัดแย้ง"
         )
 
-    print(f"OK: Component OCR selected ({count} cells)")
-    return board, occupied, candidates, confidence
+    return finalized
 
