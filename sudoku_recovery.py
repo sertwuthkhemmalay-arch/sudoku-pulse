@@ -726,7 +726,7 @@ def solve_with_candidates(board, candidates=None, confidence=None):
     recovered = _recover_unsolved_ocr(
         board,
         confidence=confidence,
-        max_cells=4,
+        max_cells=8,
     )
 
     if recovered is not None:
