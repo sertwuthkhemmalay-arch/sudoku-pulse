@@ -60,6 +60,15 @@ def solve_image(image_path):
             board
         )
 
+        # เก็บ clue จากภาพไว้แบบ immutable
+        # Recovery อาจแก้ board สำหรับค้นหาคำตอบได้
+        # แต่ห้ามใช้ board ที่ถูก Recovery แก้แล้วมาตัดสินว่า
+        # clue ในภาพต้นฉบับถูกต้องหรือไม่
+        original_board = [
+            row.copy()
+            for row in board
+        ]
+
         # ======================================
         # Solver + OCR Recovery
         # ======================================
@@ -100,6 +109,12 @@ def solve_image(image_path):
                 board
             )
 
+            # Cell OCR เป็น board ใหม่ จึงต้องบันทึก clue ชุดนี้ใหม่
+            original_board = [
+                row.copy()
+                for row in board
+            ]
+
             solution = solve_with_candidates(
                 board,
                 candidates,
@@ -133,11 +148,13 @@ def solve_image(image_path):
             return None
 
         # ======================================
-        # ตรวจว่า solution รักษา clue ของ board ที่ผ่าน OCR/recovery แล้ว
+        # ตรวจ Solution กับ clue ดั้งเดิมจากภาพ
+        # ห้ามใช้ board หลัง OCR Recovery เพราะ Recovery อาจเปลี่ยน clue
+        # ทำให้คำตอบปลอมดูเหมือนรักษา clue ได้
         # ======================================
 
         if not solution_preserves_clues(
-            board,
+            original_board,
             solution
         ):
 
@@ -159,7 +176,7 @@ def solve_image(image_path):
 
         return (
             sudoku_image,
-            board,
+            original_board,
             occupied,
             candidates,
             confidence,
