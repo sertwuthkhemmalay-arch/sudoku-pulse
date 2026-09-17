@@ -188,10 +188,13 @@ def _draw_solution(sudoku_image, occupied, solution, corrected_cells=None):
                 continue
 
             # Safety guard ตัวที่สองจาก pixel จริง
-            if _cell_has_visible_mark(
-                sudoku_image,
-                row,
-                col,
+            if (
+                (row, col) not in corrected
+                and _cell_has_visible_mark(
+                    sudoku_image,
+                    row,
+                    col,
+                )
             ):
                 print(
                     f"Draw guard: ข้าม R{row + 1}C{col + 1} "
