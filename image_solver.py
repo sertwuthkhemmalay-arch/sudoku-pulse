@@ -60,13 +60,6 @@ def solve_image(image_path):
             board
         )
 
-        # เก็บ clue ที่ OCR ยืนยันจากภาพไว้แยกต่างหาก
-        # Recovery อาจแก้ board ภายในของมันเอง แต่ห้ามแก้เลขโจทย์จริง
-        original_board = [
-            row.copy()
-            for row in board
-        ]
-
         # ======================================
         # Solver + OCR Recovery
         # ======================================
@@ -107,11 +100,6 @@ def solve_image(image_path):
                 board
             )
 
-            original_board = [
-                row.copy()
-                for row in board
-            ]
-
             solution = solve_with_candidates(
                 board,
                 candidates,
@@ -145,11 +133,11 @@ def solve_image(image_path):
             return None
 
         # ======================================
-        # ตรวจว่า clue ที่เหลืออยู่ไม่ถูกเปลี่ยน
+        # ตรวจว่า solution รักษา clue ของ board ที่ผ่าน OCR/recovery แล้ว
         # ======================================
 
         if not solution_preserves_clues(
-            original_board,
+            board,
             solution
         ):
 
