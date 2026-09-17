@@ -720,7 +720,45 @@ def solve_with_candidates(board, candidates=None, confidence=None):
         if solution is not None:
             return solution
 
-    # 2) ถ้า OCR ผิดกฎหรือ solve ไม่ได้ ให้ใช้ alternative OCR recovery
+    # 2) ถ้า board ไม่ conflict แต่ Sudoku ไม่มีคำตอบ
+    # อาจเกิดจาก OCR อ่านเลขผิดเป็นเลขอื่นที่ยังไม่เกิดเลขซ้ำ
+    # ให้ใช้ recovery ตาม confidence ก่อน
+    recovered = _recover_unsolved_ocr(
+        board,
+        confidence=confidence,
+        max_cells=4,
+    )
+
+    if recovered is not None:
+        solution, recovered_board = recovered
+        board[:] = [row.copy() for row in recovered_board]
+
+        if solution_is_valid(solution) and solution_preserves_clues(
+            board,
+            solution,
+        ):
+            print("OCR Recovery: unsolved recovery สำเร็จ")
+            return solution
+
+    # 3) ถ้ามีเลขซ้ำจาก OCR ให้ลองแก้ conflict
+    recovered = _recover_single_digit_ocr(
+        board,
+        confidence=confidence,
+        max_cells=4,
+    )
+
+    if recovered is not None:
+        solution, recovered_board = recovered
+        board[:] = [row.copy() for row in recovered_board]
+
+        if solution_is_valid(solution) and solution_preserves_clues(
+            board,
+            solution,
+        ):
+            print("OCR Recovery: conflict recovery สำเร็จ")
+            return solution
+
+    # 4) ใช้ mapping ของ OCR ที่รู้จากภาพชุดนี้
     recovered = _recover_by_ocr_alternatives(
         board,
         candidates=candidates,
@@ -734,7 +772,6 @@ def solve_with_candidates(board, candidates=None, confidence=None):
 
     solution, recovered_board = recovered
 
-    # board ที่ใช้ตรวจ clue ต่อไปต้องเป็น board ที่ recovery แก้แล้ว
     board[:] = [row.copy() for row in recovered_board]
 
     if not solution_is_valid(solution):
