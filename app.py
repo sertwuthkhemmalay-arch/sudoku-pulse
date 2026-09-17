@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 
 from image_solver import solve_image
-from digit_reader import _visual_occupied
+from digit_reader import _visual_occupied, _has_diagonal_from_gray
 from sudoku_recovery import (
     solution_is_valid,
     solution_preserves_clues,
@@ -111,6 +111,19 @@ def _cell_has_visible_mark(image, row, col):
     )
 
     ink = difference >= 35
+
+    # ภาพบางชุดมีเส้นทแยงพาดผ่านหลาย Cell
+    # เส้นนี้ไม่ใช่ clue จึงต้องตัดออกก่อนใช้ Draw Safety Guard
+    if _has_diagonal_from_gray(gray):
+        yy, xx = np.indices(cell.shape)
+        gy = yy + y1
+        gx = xx + x1
+        diagonal = (
+            (np.abs(gy - gx) <= 4)
+            |
+            (np.abs(gy - (449 - gx)) <= 4)
+        )
+        ink[diagonal] = False
 
     # ตัด pixel ที่รวมกันเป็นเส้นเล็ก ๆ ออก
     mask = (ink.astype(np.uint8) * 255)
