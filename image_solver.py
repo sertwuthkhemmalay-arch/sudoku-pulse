@@ -82,15 +82,36 @@ def solve_image(image_path):
         )
 
         # ======================================
-        # ถ้ารอบแรกไม่ได้ -> Cell OCR
+        # ตรวจรอบแรกกับ clue ดั้งเดิม
+        #
+        # Whole-board OCR อาจอ่านเลขผิด แต่ยังสร้าง
+        # Sudoku ที่มีคำตอบได้จาก Recovery
+        # ถ้า solution ไม่รักษา clue ที่ OCR อ่านมา
+        # ห้ามรับคำตอบนั้น ให้เปลี่ยนไปใช้ Cell OCR
+        # ซึ่งอ่านทีละช่องละเอียดกว่า
         # ======================================
 
-        if solution is None:
-
-            print(
-                "Whole-board OCR / Recovery "
-                "ไม่สำเร็จ -> ใช้ Cell OCR ตรวจซ้ำ"
+        first_solution_accepted = (
+            solution is not None
+            and solution_is_valid(solution)
+            and solution_preserves_clues(
+                original_board,
+                solution,
             )
+        )
+
+        if not first_solution_accepted:
+
+            if solution is not None:
+                print(
+                    "Whole-board OCR ได้ Solution "
+                    "แต่ไม่รักษา clue เดิม -> ใช้ Cell OCR ตรวจซ้ำ"
+                )
+            else:
+                print(
+                    "Whole-board OCR / Recovery "
+                    "ไม่สำเร็จ -> ใช้ Cell OCR ตรวจซ้ำ"
+                )
 
             (
                 board,
