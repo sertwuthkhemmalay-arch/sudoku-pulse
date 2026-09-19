@@ -2443,6 +2443,75 @@ def _read_blue_fast(image):
     # ตรวจว่า OCR ไม่เกิด conflict จากเลขสีน้ำเงิน
     return board, occupied, candidates, confidence
 
+def _read_verified_cell_board(image):
+    """รอบสำรอง: อ่านเฉพาะ Cell ที่ตรวจจากภาพว่ามี clue จริง
+    ใช้เมื่อ OCR รอบปกติอ่านครบไม่พอหรือ Solver หา solution ไม่ได้
+    """
+    gray = prepare_board(image)
+
+    if isinstance(image, str):
+        color = cv2.imread(image)
+    else:
+        color = image.copy() if image is not None else None
+
+    if color is None:
+        color = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    elif color.shape[:2] != (450, 450):
+        color = cv2.resize(color, (450, 450), interpolation=cv2.INTER_CUBIC)
+
+    visual = _strong_visual_occupied(color)
+
+    board = [[0] * 9 for _ in range(9)]
+    occupied = [[False] * 9 for _ in range(9)]
+    candidates = [[set(range(1, 10)) for _ in range(9)] for _ in range(9)]
+    confidence = [[0.0] * 9 for _ in range(9)]
+
+    for r in range(9):
+        for c in range(9):
+            if not visual[r][c]:
+                continue
+
+            x1, x2 = c * 50 + 5, (c + 1) * 50 - 5
+            y1, y2 = r * 50 + 5, (r + 1) * 50 - 5
+            cell = color[y1:y2, x1:x2]
+
+            observations = []
+            for psm in (6, 10, 13):
+                value, current_score = _ocr_clean_cell(cell, psm)
+                if value is not None:
+                    observations.append((value, current_score))
+
+            digit = None
+            score = 0.0
+
+            if observations:
+                counts = {}
+                for value, current_score in observations:
+                    counts.setdefault(value, []).append(current_score)
+                digit = max(
+                    counts,
+                    key=lambda value: (
+                        len(counts[value]),
+                        max(counts[value]),
+                    ),
+                )
+                score = max(counts[digit])
+            else:
+                result = read_cell(cell)
+                digit = result.get("digit")
+                score = float(result.get("confidence", 0.0))
+
+            if digit is None:
+                continue
+
+            board[r][c] = digit
+            occupied[r][c] = True
+            candidates[r][c] = {digit}
+            confidence[r][c] = score
+
+    return board, occupied, candidates, confidence
+
+
 def read_board(image, force_cell=False):
     """อ่าน Sudoku และยืนยัน clue ที่มองเห็นก่อนส่งให้ Solver."""
 
@@ -2542,6 +2611,17 @@ def read_board(image, force_cell=False):
     finalized = finalize(
         (board, occupied, candidates, confidence),
         f"Component OCR ({count} cells)",
+    )
+
+    if finalized is not None:
+        return finalized
+
+    # รอบสุดท้าย: ใช้ visual detector ที่เข้ม + OCR Cell โดยตรง
+    # เพื่อกู้กรณี Tesseract ทั้งกระดานพลาดบาง clue
+    verified = _read_verified_cell_board(image)
+    finalized = finalize(
+        verified,
+        "Verified Cell OCR",
     )
 
     if finalized is None:
