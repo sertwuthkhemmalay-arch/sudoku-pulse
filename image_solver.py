@@ -4,7 +4,8 @@ from image_preprocessor import preprocess
 
 from digit_reader import (
     read_board,
-    print_candidates
+    print_candidates,
+    _read_component_board,
 )
 
 from sudoku_recovery import (
@@ -180,11 +181,68 @@ def solve_image(image_path):
         ):
 
             print(
-                "Solution validation failed: "
-                "clue ถูกเปลี่ยน"
+                "OCR Board กับ Solution ไม่ตรงกัน "
+                "-> ตรวจเฉพาะ clue ที่ถูก Recovery ด้วย Component OCR..."
             )
 
-            return None
+            # Recovery อาจแก้ OCR ที่อ่านผิดจริงได้
+            # แต่จะยอมรับก็ต่อเมื่อ OCR คนละ pipeline ยืนยันเลขใหม่
+            # ที่ตำแหน่งเดียวกันจากภาพจริง
+            try:
+                (
+                    component_board,
+                    component_occupied,
+                    component_candidates,
+                    component_confidence,
+                    component_count,
+                ) = _read_component_board(processed)
+
+                changed_cells = []
+
+                for r in range(9):
+                    for c in range(9):
+                        old_value = original_board[r][c]
+                        new_value = solution[r][c]
+
+                        if old_value != 0 and old_value != new_value:
+                            changed_cells.append((r, c))
+
+                if not changed_cells:
+                    print("ไม่พบ clue ที่เปลี่ยน แต่ validation ไม่ผ่าน")
+                    return None
+
+                for r, c in changed_cells:
+                    if component_board[r][c] != solution[r][c]:
+                        print(
+                            "Component OCR ไม่ยืนยัน "
+                            f"R{r + 1}C{c + 1}: "
+                            f"original={original_board[r][c]}, "
+                            f"solution={solution[r][c]}, "
+                            f"component={component_board[r][c]}"
+                        )
+                        return None
+
+                # ตรวจ clue อื่น ๆ ที่ Component OCR มองเห็นด้วย
+                if not solution_preserves_clues(
+                    component_board,
+                    solution,
+                ):
+                    print(
+                        "Component OCR พบ clue ที่ไม่ตรงกับ Solution"
+                    )
+                    return None
+
+                print(
+                    "Solution ผ่านการยืนยันจาก "
+                    "Component OCR แล้ว"
+                )
+
+            except Exception as verify_error:
+                print(
+                    f"Component OCR verification failed: "
+                    f"{verify_error}"
+                )
+                return None
 
         sudoku_image = cv2.imread(
             processed
