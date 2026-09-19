@@ -334,15 +334,31 @@ def solve_route():
                 })
                 continue
 
-            (
-                sudoku_image,
-                board,
-                occupied,
-                candidates,
-                confidence,
-                solution,
-                corrected_cells,
-            ) = result
+            # รองรับทั้งผลลัพธ์แบบเก่า 6 ค่า และแบบใหม่ 7 ค่า
+            if len(result) == 7:
+                (
+                    sudoku_image,
+                    board,
+                    occupied,
+                    candidates,
+                    confidence,
+                    solution,
+                    corrected_cells,
+                ) = result
+            elif len(result) == 6:
+                (
+                    sudoku_image,
+                    board,
+                    occupied,
+                    candidates,
+                    confidence,
+                    solution,
+                ) = result
+                corrected_cells = []
+            else:
+                raise RuntimeError(
+                    f"solve_image() คืนค่าจำนวน {len(result)} ค่า ไม่ถูกต้อง"
+                )
 
             valid, error = _validate_final_result(
                 board,
