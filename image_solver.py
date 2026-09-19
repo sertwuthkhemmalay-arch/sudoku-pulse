@@ -143,6 +143,44 @@ def solve_image(image_path):
                 confidence
             )
 
+            # ถ้า OCR รอบปกติยังหา solution ไม่ได้
+            # ใช้ Verified Cell OCR เป็นรอบสุดท้าย โดยอ่านเฉพาะ
+            # ช่องที่ภาพยืนยันว่ามี clue จริง
+            if solution is None:
+                print(
+                    "Solver รอบปกติไม่สำเร็จ -> "
+                    "ใช้ Verified Cell OCR รอบสุดท้าย"
+                )
+
+                (
+                    verified_board,
+                    verified_occupied,
+                    verified_candidates,
+                    verified_confidence
+                ) = _read_verified_cell_board(processed)
+
+                _print_board(
+                    "OCR Board (Verified Cell OCR)",
+                    verified_board
+                )
+
+                verified_solution = solve_with_candidates(
+                    verified_board,
+                    verified_candidates,
+                    verified_confidence
+                )
+
+                if verified_solution is not None:
+                    board = verified_board
+                    occupied = verified_occupied
+                    candidates = verified_candidates
+                    confidence = verified_confidence
+                    original_board = [
+                        row.copy()
+                        for row in board
+                    ]
+                    solution = verified_solution
+
         # ======================================
         # ไม่มี Solution
         # ======================================
